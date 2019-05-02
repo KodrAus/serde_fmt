@@ -1,11 +1,41 @@
-use std::fmt::{self, Debug, Display};
+/*!
+# `serde::Serialize` -> `std::fmt::Debug`
+
+This library lets you take any `Serialize` and format it as if it's `Debug`.
+*/
+
+// https://github.com/rust-lang/rust/pull/60458
+#![feature(debug_map_key_value)]
+
+#![no_std]
+
+#[cfg(not(feature = "std"))]
+extern crate core as std;
+
+#[cfg(feature = "std")]
+extern crate std;
+
+use crate::std::fmt::{self, Debug, Display};
 
 use serde::ser::{
     self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
     SerializeTuple, SerializeTupleStruct, SerializeTupleVariant, Serializer,
 };
 
+/**
+Format the given value into the formatter.
+*/
+pub fn to_formatter(v: impl Serialize, fmt: &mut fmt::Formatter) -> fmt::Result {
+    v.serialize(Formatter::new(fmt)).map_err(Into::into)
+}
+
+/**
+Treat a type implementing `Serialize` like a type implementing `Debug`.
+*/
 pub trait ToDebug {
+    /**
+    Get a formattable reference.
+    */
     fn to_debug(&self) -> SerializeDebug<&Self> {
         SerializeDebug(self)
     }
@@ -18,10 +48,10 @@ where
     
 }
 
-pub fn to_formatter(value: impl Serialize, fmt: &mut fmt::Formatter) -> fmt::Result {
-    value.serialize(Formatter::new(fmt)).map_err(Into::into)
-}
-
+/**
+The result of calling [`ToDebug::to_debug`].
+*/
+#[derive(Clone, Copy)]
 pub struct SerializeDebug<T>(T);
 
 impl<T> Debug for SerializeDebug<T>
@@ -117,6 +147,13 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
         self.fmt(v)
     }
 
+    fn collect_str<T: ?Sized>(self, v: &T) -> Result<Self::Ok, Self::Error>
+    where
+        T: Display,
+    {
+        self.fmt(format_args!("{}", v))
+    }
+
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
         self.fmt(v)
     }
@@ -126,11 +163,11 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
         Ok(())
     }
 
-    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_some<T>(self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(self)
+        v.serialize(self)
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
@@ -154,13 +191,13 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
     fn serialize_newtype_struct<T>(
         self,
         name: &'static str,
-        value: &T,
+        v: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
         let mut tuple = self.serialize_tuple_struct(name, 1)?;
-        tuple.serialize_field(value)?;
+        tuple.serialize_field(v)?;
         tuple.end()
     }
 
@@ -169,13 +206,13 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        value: &T,
+        v: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
         let mut tuple = self.serialize_tuple_struct(variant, 1)?;
-        tuple.serialize_field(value)?;
+        tuple.serialize_field(v)?;
         tuple.end()
     }
 
@@ -206,9 +243,7 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        let alternate = self.0.alternate();
-
-        Ok(DebugMap::new(self.0.debug_map(), alternate))
+        Ok(DebugMap(self.0.debug_map()))
     }
 
     fn serialize_struct(
@@ -236,11 +271,11 @@ impl<'a, 'b: 'a> SerializeSeq for DebugSeq<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_element<T>(&mut self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.entry(&value.to_debug());
+        self.0.entry(&v.to_debug());
         Ok(())
     }
 
@@ -255,11 +290,11 @@ impl<'a, 'b: 'a> SerializeTuple for DebugTuple<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_element<T>(&mut self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&value.to_debug());
+        self.0.field(&v.to_debug());
         Ok(())
     }
 
@@ -274,11 +309,11 @@ impl<'a, 'b: 'a> SerializeTupleStruct for DebugTupleStruct<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_field<T>(&mut self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&value.to_debug());
+        self.0.field(&v.to_debug());
         Ok(())
     }
 
@@ -293,11 +328,11 @@ impl<'a, 'b: 'a> SerializeTupleVariant for DebugTupleVariant<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_field<T>(&mut self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&value.to_debug());
+        self.0.field(&v.to_debug());
         Ok(())
     }
 
@@ -312,11 +347,11 @@ impl<'a, 'b: 'a> SerializeStruct for DebugStruct<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_field<T>(&mut self, k: &'static str, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(key, &value.to_debug());
+        self.0.field(k, &v.to_debug());
         Ok(())
     }
 
@@ -331,11 +366,11 @@ impl<'a, 'b: 'a> SerializeStructVariant for DebugStructVariant<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_field<T>(&mut self, k: &'static str, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(key, &value.to_debug());
+        self.0.field(k, &v.to_debug());
         Ok(())
     }
 
@@ -344,87 +379,39 @@ impl<'a, 'b: 'a> SerializeStructVariant for DebugStructVariant<'a, 'b> {
     }
 }
 
-struct DebugMap<'a, 'b: 'a> {
-    fmt: fmt::DebugMap<'a, 'b>,
-    alternate: bool,
-    key_buf: KeyBuf,
-    has_key: bool,
-}
-
-impl<'a, 'b: 'a> DebugMap<'a, 'b> {
-    fn new(fmt: fmt::DebugMap<'a, 'b>, alternate: bool) -> Self {
-        DebugMap {
-            fmt,
-            alternate,
-            key_buf: KeyBuf(String::new()),
-            has_key: false,
-        }
-    }
-}
+struct DebugMap<'a, 'b: 'a>(fmt::DebugMap<'a, 'b>);
 
 impl<'a, 'b: 'a> SerializeMap for DebugMap<'a, 'b> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_entry<K, V>(&mut self, key: &K, value: &V) -> Result<Self::Ok, Self::Error>
+    fn serialize_entry<K, V>(&mut self, k: &K, v: &V) -> Result<Self::Ok, Self::Error>
     where
         K: ?Sized + Serialize,
         V: ?Sized + Serialize,
     {
-        if self.has_key {
-            return Err(Error);
-        }
-
-        self.fmt.entry(&key.to_debug(), &value.to_debug());
+        self.0.entry(&k.to_debug(), &v.to_debug());
         Ok(())
     }
 
-    fn serialize_key<T>(&mut self, key: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_key<T>(&mut self, k: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        use std::fmt::Write;
-
-        if self.has_key {
-            return Err(Error);
-        }
-
-        // If a key is given independently then we need to buffer it
-        // NOTE: It's possible this buffering is resulting in lost flags
-        self.key_buf.0.clear();
-        if self.alternate {
-            write!(&mut self.key_buf.0, "{:#?}", key.to_debug())?;
-        } else {
-            write!(&mut self.key_buf.0, "{:?}", key.to_debug())?;
-        }
-
-        self.has_key = true;
+        self.0.key(&k.to_debug());
         Ok(())
     }
 
-    fn serialize_value<T>(&mut self, value: &T) -> Result<Self::Ok, Self::Error>
+    fn serialize_value<T>(&mut self, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        if !self.has_key {
-            return Err(Error);
-        }
-
-        self.fmt.entry(&self.key_buf, &value.to_debug());
-        self.has_key = false;
+        self.0.value(&v.to_debug());
         Ok(())
     }
 
     fn end(mut self) -> Result<Self::Ok, Self::Error> {
-        self.fmt.finish().map_err(Into::into)
-    }
-}
-
-struct KeyBuf(String);
-
-impl fmt::Debug for KeyBuf {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.0)
+        self.0.finish().map_err(Into::into)
     }
 }
 
@@ -449,7 +436,8 @@ impl From<fmt::Error> for Error {
     }
 }
 
-impl std::error::Error for Error {}
+#[cfg(feature = "std")]
+impl crate::std::error::Error for Error {}
 
 impl ser::Error for Error {
     fn custom<T>(_: T) -> Self

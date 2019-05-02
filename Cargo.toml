@@ -5,8 +5,10 @@ authors = ["Ashley Mannix <ashleymannix@live.com.au>"]
 edition = "2018"
 
 [features]
+default = ["std"]
+
+std = ["serde/std"]
 
 [dependencies.serde]
 version = "1"
-features = ["std"]
 default-features = false
