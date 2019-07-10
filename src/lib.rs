@@ -4,7 +4,7 @@
 This library lets you take any `Serialize` and format it as if it's `Debug`.
 */
 
-// https://github.com/rust-lang/rust/pull/60458
+// https://github.com/rust-lang/rust/issues/62482
 #![feature(debug_map_key_value)]
 
 #![no_std]
@@ -27,6 +27,16 @@ Format the given value into the formatter.
 */
 pub fn to_formatter(v: impl Serialize, fmt: &mut fmt::Formatter) -> fmt::Result {
     v.serialize(Formatter::new(fmt)).map_err(Into::into)
+}
+
+/**
+Treat a type implementing `Serialize` like a type implementing `Debug`.
+*/
+pub fn to_debug<T>(v: T) -> SerializeDebug<T>
+where
+    T: Serialize,
+{
+    SerializeDebug(v)
 }
 
 /**
@@ -167,7 +177,7 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        v.serialize(self)
+        self.serialize_newtype_struct("Some", v)
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
@@ -445,5 +455,101 @@ impl ser::Error for Error {
         T: Display,
     {
         Error
+    }
+}
+
+#[cfg(test)]
+#[macro_use]
+extern crate serde_derive;
+
+#[cfg(all(test, feature = "std"))]
+mod tests {
+    use super::*;
+
+    fn check_fmt(v: (impl fmt::Debug + Serialize)) {
+        use crate::std::format;
+
+        assert_eq!(format!("{:?}", v), format!("{:?}", v.to_debug()));
+    }
+
+    #[test]
+    fn struct_fmt_is_consitent() {
+        #[derive(Serialize, Debug)]
+        struct Struct {
+            a: Signed,
+            b: Unsigned,
+            c: char,
+            d: &'static str,
+            e: &'static [u8],
+            f: (),
+        }
+
+        #[derive(Serialize, Debug)]
+        struct Signed {
+            a: i8,
+            b: i16,
+            c: i32,
+            d: i64,
+        }
+
+        #[derive(Serialize, Debug)]
+        struct Unsigned {
+            a: u8,
+            b: u16,
+            c: u32,
+            d: u64,
+        }
+
+        check_fmt(Struct {
+            a: Signed {
+                a: -1,
+                b: 42,
+                c: -42,
+                d: 42,
+            },
+            b: Unsigned {
+                a: 1,
+                b: 42,
+                c: 1,
+                d: 42
+            },
+            c: 'a',
+            d: "a string",
+            e: &[1, 2, 3],
+            f: (),
+        });
+    }
+
+    #[test]
+    fn option_fmt_is_consistent() {
+        check_fmt(Option::Some::<i32>(42));
+        check_fmt(Option::None::<i32>);
+    }
+
+    #[test]
+    fn result_fmt_is_consistent() {
+        check_fmt(Result::Ok::<i32, i32>(42));
+        check_fmt(Result::Err::<i32, i32>(42));
+    }
+
+    #[test]
+    fn tuple_fmt_is_consistent() {
+        check_fmt((42, 17));
+    }
+
+    #[test]
+    fn tagged_fmt_is_consistent() {
+        #[derive(Serialize, Debug)]
+        enum Tagged {
+            Unit,
+            NewType(i32),
+            Tuple(i32, i32),
+            Struct { a: i32, b: i32 },
+        }
+
+        check_fmt(Tagged::Unit);
+        check_fmt(Tagged::NewType(42));
+        check_fmt(Tagged::Tuple(42, 17));
+        check_fmt(Tagged::Struct { a: 42, b: 17 });
     }
 }
