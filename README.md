@@ -1,4 +1,4 @@
-# `serde_fmt`
+# `serde_fmt` [![Build Status](https://travis-ci.com/KodrAus/serde_fmt.svg?branch=master)](https://travis-ci.com/KodrAus/serde_fmt)
 
 Convert any `serde::Serialize` into a `std::fmt::Debug`:
 
