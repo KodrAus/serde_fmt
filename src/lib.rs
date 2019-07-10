@@ -1,11 +1,13 @@
 /*!
-# `serde::Serialize` -> `std::fmt::Debug`
+# `serde` -> `std::fmt`
 
 This library lets you take any `Serialize` and format it as if it's `Debug`.
 */
 
 // https://github.com/rust-lang/rust/issues/62482
 #![feature(debug_map_key_value)]
+
+#![doc(html_root_url = "https://docs.rs/serde_fmt/0.0.0")]
 
 #![no_std]
 
