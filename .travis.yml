@@ -1,0 +1,15 @@
+sudo: required
+language: rust
+
+matrix:
+  include:
+    - rust: nightly
+      env:
+      - LABEL="nightly"
+      script:
+      - ./ci/nightly.sh
+    - rust: nightly
+      env:
+      - LABEL="no-std"
+      script:
+      - ./ci/thumbv6m.sh
