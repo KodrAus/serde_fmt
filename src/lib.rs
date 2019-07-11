@@ -2,6 +2,41 @@
 # `serde` -> `std::fmt`
 
 This library lets you take any `Serialize` and format it as if it's `Debug`.
+The format produced is the same as if the type derived `Debug`, and any
+formatting flags will be preserved.
+
+# Getting started
+
+Add `serde_fmt` to your `Cargo.toml`:
+
+```toml,ignore
+[dependencies.serde_fmt]
+version = "0.0.0"
+```
+
+By default, this library will depend on the standard library.
+To use it it no-std environments, you can disable the default crate features:
+
+```toml,ignore
+[dependencies.serde_fmt]
+version = "0.0.0"
+default-features = false
+```
+
+# Formatting a `Serialize`
+
+Use the [`to_debug`] function to treat a [`serde::Serialize`] like a [`std::fmt::Debug`]:
+
+```rust
+# use serde::Serialize;
+fn takes_serialize(v: impl Serialize) {
+    // You can dump any `Serialize` using the
+    // standard `dbg!` macro
+    dbg!(serde_fmt::to_debug(&v));
+
+    // do something with `v`
+}
+```
 */
 
 // https://github.com/rust-lang/rust/issues/62482
@@ -25,53 +60,60 @@ use serde::ser::{
 };
 
 /**
-Format the given value into the formatter.
+Format a [`serde::Serialize`] into a [`std::fmt::Write`].
 */
-pub fn to_formatter(v: impl Serialize, fmt: &mut fmt::Formatter) -> fmt::Result {
-    v.serialize(Formatter::new(fmt)).map_err(Into::into)
+pub fn to_writer(v: impl Serialize, mut w: impl fmt::Write) -> fmt::Result {
+    w.write_fmt(format_args!("{:?}", to_debug(v)))
 }
 
 /**
-Treat a type implementing `Serialize` like a type implementing `Debug`.
+Treat a type implementing [`serde::Serialize`] like a type implementing [`std::fmt::Debug`].
 */
-pub fn to_debug<T>(v: T) -> SerializeDebug<T>
+pub fn to_debug<T>(v: T) -> ToDebug<T>
 where
     T: Serialize,
 {
-    SerializeDebug(v)
+    ToDebug(v)
 }
 
 /**
-Treat a type implementing `Serialize` like a type implementing `Debug`.
-*/
-pub trait ToDebug {
-    /**
-    Get a formattable reference.
-    */
-    fn to_debug(&self) -> SerializeDebug<&Self> {
-        SerializeDebug(self)
-    }
-}
-
-impl<S> ToDebug for S
-where
-    S: ?Sized + Serialize,
-{
-    
-}
-
-/**
-The result of calling [`ToDebug::to_debug`].
+The result of calling [`to_debug`] .
 */
 #[derive(Clone, Copy)]
-pub struct SerializeDebug<T>(T);
+pub struct ToDebug<T>(T);
 
-impl<T> Debug for SerializeDebug<T>
+impl<T> Debug for ToDebug<T>
 where
     T: Serialize,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        to_formatter(&self.0, f)
+        self.0.serialize(Formatter::new(f)).map_err(Into::into)
+    }
+}
+
+// Even though it's not specified, since we treat `fmt::Debug`
+// as the canonical format for `ToDebug` we can also think of
+// it as the human-readable `Display`able format in the same
+// way that `fmt::Arguments` does.
+impl<T> Display for ToDebug<T>
+where
+    T: Serialize,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.serialize(Formatter::new(f)).map_err(Into::into)
+    }
+}
+
+// Surface the original `Serialize` implementation.
+impl<T> Serialize for ToDebug<T>
+where
+    T: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
     }
 }
 
@@ -287,7 +329,7 @@ impl<'a, 'b: 'a> SerializeSeq for DebugSeq<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.entry(&v.to_debug());
+        self.0.entry(&to_debug(v));
         Ok(())
     }
 
@@ -306,7 +348,7 @@ impl<'a, 'b: 'a> SerializeTuple for DebugTuple<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&v.to_debug());
+        self.0.field(&to_debug(v));
         Ok(())
     }
 
@@ -325,7 +367,7 @@ impl<'a, 'b: 'a> SerializeTupleStruct for DebugTupleStruct<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&v.to_debug());
+        self.0.field(&to_debug(v));
         Ok(())
     }
 
@@ -344,7 +386,7 @@ impl<'a, 'b: 'a> SerializeTupleVariant for DebugTupleVariant<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(&v.to_debug());
+        self.0.field(&to_debug(v));
         Ok(())
     }
 
@@ -363,7 +405,7 @@ impl<'a, 'b: 'a> SerializeStruct for DebugStruct<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(k, &v.to_debug());
+        self.0.field(k, &to_debug(v));
         Ok(())
     }
 
@@ -382,7 +424,7 @@ impl<'a, 'b: 'a> SerializeStructVariant for DebugStructVariant<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.field(k, &v.to_debug());
+        self.0.field(k, &to_debug(v));
         Ok(())
     }
 
@@ -402,7 +444,7 @@ impl<'a, 'b: 'a> SerializeMap for DebugMap<'a, 'b> {
         K: ?Sized + Serialize,
         V: ?Sized + Serialize,
     {
-        self.0.entry(&k.to_debug(), &v.to_debug());
+        self.0.entry(&to_debug(k), &to_debug(v));
         Ok(())
     }
 
@@ -410,7 +452,7 @@ impl<'a, 'b: 'a> SerializeMap for DebugMap<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.key(&k.to_debug());
+        self.0.key(&to_debug(k));
         Ok(())
     }
 
@@ -418,7 +460,7 @@ impl<'a, 'b: 'a> SerializeMap for DebugMap<'a, 'b> {
     where
         T: ?Sized + Serialize,
     {
-        self.0.value(&v.to_debug());
+        self.0.value(&to_debug(v));
         Ok(())
     }
 
@@ -471,7 +513,7 @@ mod tests {
     fn check_fmt(v: (impl fmt::Debug + Serialize)) {
         use crate::std::format;
 
-        assert_eq!(format!("{:?}", v), format!("{:?}", v.to_debug()));
+        assert_eq!(format!("{:?}", v), format!("{:?}", to_debug(v)));
     }
 
     #[test]
@@ -520,6 +562,22 @@ mod tests {
             e: &[1, 2, 3],
             f: (),
         });
+    }
+
+    #[test]
+    fn fmt_flags_are_consistent() {
+        use crate::std::format;
+
+        #[derive(Serialize, Debug)]
+        struct Struct {
+            a: i32,
+            b: i32,
+        }
+
+        assert_eq!(format!("{:03?}", 42), format!("{:03?}", to_debug(42)));
+        assert_eq!(format!("{:x?}", 42), format!("{:x?}", to_debug(42)));
+        assert_eq!(format!("{:X?}", 42), format!("{:X?}", to_debug(42)));
+        assert_eq!(format!("{:#?}", Struct { a: 42, b: 17 }), format!("{:#?}", to_debug(Struct { a: 42, b: 17 })));
     }
 
     #[test]

@@ -17,3 +17,20 @@ fn takes_serialize(v: impl Serialize) {
 ## Supported `rustc`
 
 This library requires a very recent **nightly** compiler.
+
+## Getting started
+
+Add `serde_fmt` to your `Cargo.toml`:
+
+```toml
+[dependencies.serde_fmt]
+version = "0.0.0"
+```
+
+By default, this library will depend on the standard library. To use it it no-std environments, you can disable the default crate features:
+
+```toml
+[dependencies.serde_fmt]
+version = "0.0.0"
+default-features = false
+```
