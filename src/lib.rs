@@ -11,7 +11,7 @@ Add `serde_fmt` to your `Cargo.toml`:
 
 ```toml,ignore
 [dependencies.serde_fmt]
-version = "0.0.0"
+version = "0.0.1"
 ```
 
 By default, this library will depend on the standard library.
@@ -19,7 +19,7 @@ To use it it no-std environments, you can disable the default crate features:
 
 ```toml,ignore
 [dependencies.serde_fmt]
-version = "0.0.0"
+version = "0.0.1"
 default-features = false
 ```
 
@@ -42,7 +42,7 @@ fn takes_serialize(v: impl Serialize) {
 // https://github.com/rust-lang/rust/issues/62482
 #![feature(debug_map_key_value)]
 
-#![doc(html_root_url = "https://docs.rs/serde_fmt/0.0.0")]
+#![doc(html_root_url = "https://docs.rs/serde_fmt/0.0.1")]
 
 #![no_std]
 
