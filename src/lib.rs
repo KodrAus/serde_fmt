@@ -14,13 +14,13 @@ Add `serde_fmt` to your `Cargo.toml`:
 version = "0.0.1"
 ```
 
-By default, this library will depend on the standard library.
-To use it it no-std environments, you can disable the default crate features:
+By default, this library doesn't depend on the standard library.
+You can enable support with the `std` Cargo feature:
 
 ```toml,ignore
 [dependencies.serde_fmt]
 version = "0.0.1"
-default-features = false
+features = ["std"]
 ```
 
 # Formatting a `Serialize`
@@ -39,11 +39,7 @@ fn takes_serialize(v: impl Serialize) {
 ```
 */
 
-// https://github.com/rust-lang/rust/issues/62482
-#![feature(debug_map_key_value)]
-
 #![doc(html_root_url = "https://docs.rs/serde_fmt/0.0.1")]
-
 #![no_std]
 
 #[cfg(not(feature = "std"))]
@@ -242,11 +238,7 @@ impl<'a, 'b: 'a> Serializer for Formatter<'a, 'b> {
         self.serialize_tuple_struct(variant, 0)?.end()
     }
 
-    fn serialize_newtype_struct<T>(
-        self,
-        name: &'static str,
-        v: &T,
-    ) -> Result<Self::Ok, Self::Error>
+    fn serialize_newtype_struct<T>(self, name: &'static str, v: &T) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
@@ -490,8 +482,7 @@ impl From<fmt::Error> for Error {
     }
 }
 
-#[cfg(feature = "std")]
-impl crate::std::error::Error for Error {}
+impl ser::StdError for Error {}
 
 impl ser::Error for Error {
     fn custom<T>(_: T) -> Self
@@ -503,12 +494,12 @@ impl ser::Error for Error {
 }
 
 #[cfg(test)]
-#[macro_use]
 extern crate serde_derive;
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
+    use serde_derive::*;
 
     fn check_fmt(v: (impl fmt::Debug + Serialize)) {
         use crate::std::format;
@@ -555,7 +546,7 @@ mod tests {
                 a: 1,
                 b: 42,
                 c: 1,
-                d: 42
+                d: 42,
             },
             c: 'a',
             d: "a string",
@@ -577,7 +568,10 @@ mod tests {
         assert_eq!(format!("{:03?}", 42), format!("{:03?}", to_debug(42)));
         assert_eq!(format!("{:x?}", 42), format!("{:x?}", to_debug(42)));
         assert_eq!(format!("{:X?}", 42), format!("{:X?}", to_debug(42)));
-        assert_eq!(format!("{:#?}", Struct { a: 42, b: 17 }), format!("{:#?}", to_debug(Struct { a: 42, b: 17 })));
+        assert_eq!(
+            format!("{:#?}", Struct { a: 42, b: 17 }),
+            format!("{:#?}", to_debug(Struct { a: 42, b: 17 }))
+        );
     }
 
     #[test]
