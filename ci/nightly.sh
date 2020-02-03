@@ -2,4 +2,5 @@
 
 set -o errexit -o nounset
 
-cargo test
+cargo build
+cargo test --features std

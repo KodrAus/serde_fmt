@@ -18,13 +18,11 @@ categories = ["encoding", "no-std"]
 travis-ci = { repository = "KodrAus/serde_fmt" }
 
 [features]
-default = ["std"]
-
 # Support the standard library
 std = ["serde/std"]
 
 [dependencies.serde]
-version = "1"
+version = "1.0.104"
 default-features = false
 
 [dev-dependencies.serde_derive]
