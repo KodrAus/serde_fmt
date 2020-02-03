@@ -16,7 +16,7 @@ fn takes_serialize(v: impl Serialize) {
 
 ## Supported `rustc`
 
-This library requires a very recent **nightly** compiler.
+This library requires a Rust compiler that's at least `1.42.0`.
 
 ## Getting started
 
