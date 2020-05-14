@@ -24,13 +24,13 @@ Add `serde_fmt` to your `Cargo.toml`:
 
 ```toml
 [dependencies.serde_fmt]
-version = "1.0.0"
+version = "1.0.1"
 ```
 
 By default, this library will depend on the standard library. To use it it no-std environments, you can disable the default crate features:
 
 ```toml
 [dependencies.serde_fmt]
-version = "1.0.0"
+version = "1.0.1"
 default-features = false
 ```
