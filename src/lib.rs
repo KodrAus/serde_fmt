@@ -39,7 +39,7 @@ fn takes_serialize(v: impl Serialize) {
 ```
 */
 
-#![doc(html_root_url = "https://docs.rs/serde_fmt/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/serde_fmt/1.0.0")]
 #![no_std]
 
 #[cfg(not(feature = "std"))]
