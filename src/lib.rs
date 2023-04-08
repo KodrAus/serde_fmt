@@ -466,7 +466,7 @@ struct Error;
 
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "serde_fmt error")
+        write!(f, "failed to serialize to a standard formatter")
     }
 }
 

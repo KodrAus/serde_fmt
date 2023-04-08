@@ -8,14 +8,11 @@ documentation = "https://docs.rs/serde_fmt"
 repository = "https://github.com/KodrAus/serde_fmt.git"
 readme = "README.md"
 exclude = [
-    ".travis.yml"
+    ".github"
 ]
 license = "Apache-2.0 OR MIT"
 keywords = ["serialization", "no_std"]
 categories = ["encoding", "no-std"]
-
-[badges]
-travis-ci = { repository = "KodrAus/serde_fmt" }
 
 [features]
 # Support the standard library
