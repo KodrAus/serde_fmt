@@ -1,5 +1,6 @@
 # `serde_fmt`
 
+[![rust](https://github.com/KodrAus/serde_fmt/actions/workflows/rust.yml/badge.svg)](https://github.com/KodrAus/serde_fmt/actions/workflows/rust.yml)
 [![Latest version](https://img.shields.io/crates/v/serde_fmt.svg)](https://crates.io/crates/serde_fmt)
 [![Documentation Latest](https://docs.rs/serde_fmt/badge.svg)](https://docs.rs/serde_fmt)
 
