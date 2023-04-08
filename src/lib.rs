@@ -11,7 +11,7 @@ Add `serde_fmt` to your `Cargo.toml`:
 
 ```toml,ignore
 [dependencies.serde_fmt]
-version = "1.0.1"
+version = "1.0.2"
 ```
 
 By default, this library doesn't depend on the standard library.
@@ -19,7 +19,7 @@ You can enable support with the `std` Cargo feature:
 
 ```toml,ignore
 [dependencies.serde_fmt]
-version = "1.0.1"
+version = "1.0.2"
 features = ["std"]
 ```
 
@@ -39,7 +39,7 @@ fn takes_serialize(v: impl Serialize) {
 ```
 */
 
-#![doc(html_root_url = "https://docs.rs/serde_fmt/1.0.1")]
+#![doc(html_root_url = "https://docs.rs/serde_fmt/1.0.2")]
 #![no_std]
 
 #[cfg(not(feature = "std"))]
