@@ -40,12 +40,12 @@ fn takes_serialize(v: impl Serialize) {
 */
 
 #![doc(html_root_url = "https://docs.rs/serde_fmt/1.0.2")]
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
-#[cfg(not(feature = "std"))]
+#[cfg(all(not(test), not(feature = "std")))]
 extern crate core as std;
 
-#[cfg(feature = "std")]
+#[cfg(any(test, feature = "std"))]
 extern crate std;
 
 use crate::std::fmt::{self, Debug, Display};
@@ -496,15 +496,27 @@ impl ser::Error for Error {
 #[cfg(test)]
 extern crate serde_derive;
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
+    use serde::ser::Error as _;
     use serde_derive::*;
 
     fn check_fmt(v: (impl fmt::Debug + Serialize)) {
-        use crate::std::format;
-
         assert_eq!(format!("{:?}", v), format!("{:?}", to_debug(v)));
+    }
+
+    #[test]
+    fn failing_serialize_does_not_panic_to_string() {
+        struct Kaboom;
+
+        impl Serialize for Kaboom {
+            fn serialize<S: Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+                Err(S::Error::custom("kaboom!"))
+            }
+        }
+
+        let _ = to_debug(Kaboom).to_string();
     }
 
     #[test]
