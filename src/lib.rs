@@ -83,7 +83,7 @@ where
     T: Serialize,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.serialize(Formatter::new(f)).map_err(Into::into)
+        fmt::Display::fmt(self, f)
     }
 }
 
@@ -96,7 +96,13 @@ where
     T: Serialize,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.serialize(Formatter::new(f)).map_err(Into::into)
+        // If the `Serialize` impl fails then swallow the error rather than
+        // propagate it; Traits like `ToString` expect formatting to be
+        // infallible unless the writer itself fails
+        match self.0.serialize(Formatter::new(f)) {
+            Ok(()) => Ok(()),
+            Err(e) => write!(f, "<formatting failed: {}>", e),
+        }
     }
 }
 
@@ -516,7 +522,15 @@ mod tests {
             }
         }
 
-        let _ = to_debug(Kaboom).to_string();
+        #[derive(Serialize)]
+        struct NestedKaboom {
+            a: i32,
+            b: Kaboom,
+            c: i32,
+        }
+
+        assert_eq!("<formatting failed: failed to serialize to a standard formatter>", to_debug(Kaboom).to_string());
+        assert_eq!("NestedKaboom { a: 1, b: <formatting failed: failed to serialize to a standard formatter>, c: 2 }", to_debug(NestedKaboom { a: 1, b: Kaboom, c: 2 }).to_string());
     }
 
     #[test]
