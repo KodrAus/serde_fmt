@@ -101,7 +101,7 @@ where
         // infallible unless the writer itself fails
         match self.0.serialize(Formatter::new(f)) {
             Ok(()) => Ok(()),
-            Err(e) => write!(f, "<formatting failed: {}>", e),
+            Err(e) => write!(f, "<{}>", e),
         }
     }
 }
@@ -529,8 +529,8 @@ mod tests {
             c: i32,
         }
 
-        assert_eq!("<formatting failed: failed to serialize to a standard formatter>", to_debug(Kaboom).to_string());
-        assert_eq!("NestedKaboom { a: 1, b: <formatting failed: failed to serialize to a standard formatter>, c: 2 }", to_debug(NestedKaboom { a: 1, b: Kaboom, c: 2 }).to_string());
+        assert_eq!("<failed to serialize to a standard formatter>", to_debug(Kaboom).to_string());
+        assert_eq!("NestedKaboom { a: 1, b: <failed to serialize to a standard formatter>, c: 2 }", to_debug(NestedKaboom { a: 1, b: Kaboom, c: 2 }).to_string());
     }
 
     #[test]
