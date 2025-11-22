@@ -25,10 +25,10 @@ features = ["std"]
 
 # Formatting a `Serialize`
 
-Use the [`to_debug`] function to treat a [`serde::Serialize`] like a [`std::fmt::Debug`]:
+Use the [`to_debug`] function to treat a [`serde_core::Serialize`] like a [`std::fmt::Debug`]:
 
 ```rust
-# use serde::Serialize;
+# use serde_core::Serialize;
 fn takes_serialize(v: impl Serialize) {
     // You can dump any `Serialize` using the
     // standard `dbg!` macro
@@ -50,20 +50,20 @@ extern crate std;
 
 use crate::std::fmt::{self, Debug, Display};
 
-use serde::ser::{
+use serde_core::ser::{
     self, Serialize, SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant,
     SerializeTuple, SerializeTupleStruct, SerializeTupleVariant, Serializer,
 };
 
 /**
-Format a [`serde::Serialize`] into a [`std::fmt::Write`].
+Format a [`serde_core::Serialize`] into a [`std::fmt::Write`].
 */
 pub fn to_writer(v: impl Serialize, mut w: impl fmt::Write) -> fmt::Result {
     w.write_fmt(format_args!("{:?}", to_debug(v)))
 }
 
 /**
-Treat a type implementing [`serde::Serialize`] like a type implementing [`std::fmt::Debug`].
+Treat a type implementing [`serde_core::Serialize`] like a type implementing [`std::fmt::Debug`].
 */
 pub fn to_debug<T>(v: T) -> ToDebug<T>
 where
@@ -505,10 +505,10 @@ extern crate serde_derive;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::ser::Error as _;
+    use serde_core::ser::Error as _;
     use serde_derive::*;
 
-    fn check_fmt(v: (impl fmt::Debug + Serialize)) {
+    fn check_fmt(v: impl fmt::Debug + Serialize) {
         assert_eq!(format!("{:?}", v), format!("{:?}", to_debug(v)));
     }
 
